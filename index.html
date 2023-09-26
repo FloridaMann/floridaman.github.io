@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SkySearch</title>
+    <style>
+        /* Add some basic styling */
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        table, th, td {
+            border: 1px solid black;
+        }
+        th, td {
+            padding: 8px;
+            text-align: left;
+        }
+    </style>
+</head>
+<body>
+    <h1>SkySearch</h1>
+    
+    <!-- Create a form to input the flight details -->
+    <form id="flightForm">
+        <label for="originCity">Origin City: </label>
+        <input type="text" id="originCity"><br>
+        
+        <label for="destinationCity">Destination City: </label>
+        <input type="text" id="destinationCity"><br>
+
+        <label for="flightDate">Flight Date: </label>
+        <input type="date" id="flightDate"><br>
+
+        <button type="submit">Filter Flights</button>
+    </form>
+    
+    <!-- Display flight information in a table -->
+    <table id="flightTable">
+        <thead>
+            <tr>
+                <th>Flight Number</th>
+                <th>Airline</th>
+                <th>Departure Airport</th>
+                <th>Arrival Airport</th>
+                <th>Flight Date</th>
+            </tr>
+        </thead>
+        <tbody id="flightTableBody">
+            <!-- Flight data rows will be dynamically added here -->
+        </tbody>
+    </table>
+
+    <script>
+        // Add your aviationstack API key here
+        const apiKey = 'b65e8a9712cc109f0642ca3d7462a2f7';
+
+        // Function to fetch flight information from aviationstack
+        async function fetchFlightInformation(originCity, destinationCity, flightDate) {
+            try {
+                let apiUrl = `http://api.aviationstack.com/v1/flights?access_key=${apiKey}`;
+                
+                // Build the API URL based on user input
+                if (originCity) {
+                    apiUrl += `&dep_iata=${originCity}`;
+                }
+                if (destinationCity) {
+                    apiUrl += `&arr_iata=${destinationCity}`;
+                }
+                if (flightDate) {
+                    apiUrl += `&flight_date=${flightDate}`;
+                }
+
+                const response = await fetch(apiUrl);
+                const data = await response.json();
+                return data;
+            } catch (error) {
+                console.error('Error fetching flight information:', error);
+                return null;
+            }
+        }
+
+        // Function to populate the flight table with data
+        function populateFlightTable(data) {
+            const flightTableBody = document.getElementById('flightTableBody');
+            flightTableBody.innerHTML = '';
+
+            if (data && data.data && data.data.length > 0) {
+                data.data.forEach(flight => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${flight.flight.iata}</td>
+                        <td>${flight.airline.name}</td>
+                        <td>${flight.departure.airport}</td>
+                        <td>${flight.arrival.airport}</td>
+                        <td>${flight.flight_date}</td>
+                    `;
+                    flightTableBody.appendChild(row);
+                });
+            } else {
+                flightTableBody.innerHTML = '<tr><td colspan="5">No flights found for the provided details.</td></tr>';
+            }
+        }
+
+        // Handle form submission
+        const flightForm = document.getElementById('flightForm');
+        flightForm.addEventListener('submit', async function (event) {
+            event.preventDefault();
+
+            // Get user input
+            const originCity = document.getElementById('originCity').value;
+            const destinationCity = document.getElementById('destinationCity').value;
+            const flightDate = document.getElementById('flightDate').value;
+
+            // Filter and display the fetched data
+            filterAndDisplayData(originCity, destinationCity, flightDate);
+        });
+
+        // Function to filter and display data based on user input
+        function filterAndDisplayData(originCity, destinationCity, flightDate) {
+            // Filter the fetched data based on user input
+            const filteredData = initialFlightData.filter(flight => {
+                return (
+                    (!originCity || flight.departure.airport.toLowerCase().includes(originCity.toLowerCase())) &&
+                    (!destinationCity || flight.arrival.airport.toLowerCase().includes(destinationCity.toLowerCase())) &&
+                    (!flightDate || flight.flight_date === flightDate)
+                );
+            });
+
+            // Populate the flight table with the filtered data
+            populateFlightTable({ data: filteredData });
+        }
+
+        // Initial fetch of flight data when the page loads
+        let initialFlightData = [];
+
+        (async () => {
+            try {
+                const data = await fetchFlightInformation();
+                if (data) {
+                    initialFlightData = data.data;
+                    populateFlightTable({ data: initialFlightData });
+                } else {
+                    console.error('Initial flight data fetch failed.');
+                }
+            } catch (error) {
+                console.error('Error fetching initial flight data:', error);
+            }
+        })();
+    </script>
+</body>
+</html>
